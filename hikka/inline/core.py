@@ -138,9 +138,10 @@ class InlineManager(
             token=self._token,
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
         )
-        Bot.set_current(self.bot)
+        # aiogram v3 dropped Bot.set_current; keep direct references instead
         self._bot = self.bot
-        self._dp = Dispatcher(self.bot)
+        # In aiogram v3, Dispatcher is created without Bot and started with it later
+        self._dp = Dispatcher()
 
         try:
             bot_me = await self.bot.get_me()
@@ -177,25 +178,21 @@ class InlineManager(
 
         await self._client.delete_messages(self.bot_username, m)
 
-        self._dp.register_inline_handler(
+        # aiogram v3 style handler registrations
+        self._dp.inline_query.register(
             self._inline_handler,
-            lambda _: True,
         )
 
-        self._dp.register_callback_query_handler(
+        self._dp.callback_query.register(
             self._callback_query_handler,
-            lambda _: True,
         )
 
-        self._dp.register_chosen_inline_handler(
+        self._dp.chosen_inline_result.register(
             self._chosen_inline_handler,
-            lambda _: True,
         )
 
-        self._dp.register_message_handler(
+        self._dp.message.register(
             self._message_handler,
-            lambda *_: True,
-            content_types=["any"],
         )
 
         old = self.bot.get_updates
@@ -213,13 +210,17 @@ class InlineManager(
 
         self.bot.get_updates = new
 
-        self._task = asyncio.ensure_future(self._dp.start_polling())
+        # In aiogram v3, pass Bot instance to start_polling
+        self._task = asyncio.ensure_future(self._dp.start_polling(self.bot))
         self._cleaner_task = asyncio.ensure_future(self._cleaner())
 
     async def _stop(self):
         """Stop the bot"""
         self._task.cancel()
-        self._dp.stop_polling()
+        # stop_polling may not exist in aiogram v3; guard it
+        stop_polling = getattr(self._dp, "stop_polling", None)
+        with contextlib.suppress(Exception):
+            stop_polling and stop_polling()
         self._cleaner_task.cancel()
 
     def pop_web_auth_token(self, token: str) -> bool:
