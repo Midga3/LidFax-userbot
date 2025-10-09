@@ -138,9 +138,7 @@ class InlineManager(
             token=self._token,
             default=DefaultBotProperties(parse_mode=ParseMode.HTML),
         )
-        # aiogram v3 dropped Bot.set_current; keep direct references instead
         self._bot = self.bot
-        # In aiogram v3, Dispatcher is created without Bot and started with it later
         self._dp = Dispatcher()
 
         try:
@@ -178,7 +176,6 @@ class InlineManager(
 
         await self._client.delete_messages(self.bot_username, m)
 
-        # aiogram v3 style handler registrations
         self._dp.inline_query.register(
             self._inline_handler,
         )
@@ -210,14 +207,12 @@ class InlineManager(
 
         self.bot.get_updates = new
 
-        # In aiogram v3, pass Bot instance to start_polling
         self._task = asyncio.ensure_future(self._dp.start_polling(self.bot))
         self._cleaner_task = asyncio.ensure_future(self._cleaner())
 
     async def _stop(self):
         """Stop the bot"""
         self._task.cancel()
-        # stop_polling may not exist in aiogram v3; guard it
         stop_polling = getattr(self._dp, "stop_polling", None)
         with contextlib.suppress(Exception):
             stop_polling and stop_polling()

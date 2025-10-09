@@ -32,7 +32,6 @@ logger = logging.getLogger(__name__)
 class Events(InlineUnit):
     async def _message_handler(self, message: AiogramMessage):
         """Processes incoming messages"""
-        # In aiogram v3 Chat.type is ChatType enum
         if message.chat.type != ChatType.PRIVATE or message.text == "/start hikka init":
             return
 
